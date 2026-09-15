@@ -3,8 +3,10 @@ package com.example.hotspotoptimizer
 import android.Manifest
 import android.bluetooth.BluetoothManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.AudioManager
+import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -21,13 +23,19 @@ class MainActivity : AppCompatActivity() {
     private val requestBluetoothPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted) {
-            turnOffBluetooth()
-            runAutomaticOptimizations()
+        if (granted) turnOffBluetooth()
+        runAutomaticOptimizations()
+    }
+
+    private val requestVpnPermission = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK) {
+            startDnsVpn()
         } else {
-            Toast.makeText(this, "Bluetooth permission denied", Toast.LENGTH_SHORT).show()
-            runAutomaticOptimizations()
+            Toast.makeText(this, "VPN permission denied - DNS adblock not active", Toast.LENGTH_SHORT).show()
         }
+        runAutomaticOptimizations()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,7 +43,6 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Keep screen on while app is open
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         updateStatus()
@@ -51,17 +58,35 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startOptimize() {
-        // Request Bluetooth permission if needed, then run everything
+        // Bluetooth
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT)
                 != PackageManager.PERMISSION_GRANTED
             ) {
                 requestBluetoothPermission.launch(Manifest.permission.BLUETOOTH_CONNECT)
+                // VPN will be requested after Bluetooth flow finishes
+                prepareVpn()
                 return
             }
         }
         turnOffBluetooth()
-        runAutomaticOptimizations()
+        prepareVpn()
+    }
+
+    private fun prepareVpn() {
+        val intent = VpnService.prepare(this)
+        if (intent != null) {
+            requestVpnPermission.launch(intent)
+        } else {
+            startDnsVpn()
+            runAutomaticOptimizations()
+        }
+    }
+
+    private fun startDnsVpn() {
+        val intent = Intent(this, DnsVpnService::class.java)
+        startService(intent)
+        Toast.makeText(this, "Ad-blocking DNS (AdGuard) started", Toast.LENGTH_SHORT).show()
     }
 
     private fun runAutomaticOptimizations() {
@@ -69,7 +94,7 @@ class MainActivity : AppCompatActivity() {
         lowerBrightness()
         muteAllVolumes()
         updateStatus()
-        Toast.makeText(this, "Automatic optimizations applied", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Optimizations applied", Toast.LENGTH_SHORT).show()
     }
 
     private fun turnOffBluetooth() {
@@ -80,11 +105,7 @@ class MainActivity : AppCompatActivity() {
                 @Suppress("DEPRECATION")
                 adapter.disable()
             }
-        } catch (_: SecurityException) {
-            // permission missing - ignore
-        } catch (_: Exception) {
-            // ignore
-        }
+        } catch (_: Exception) {}
     }
 
     private fun enableDoNotDisturb() {
@@ -93,10 +114,7 @@ class MainActivity : AppCompatActivity() {
             if (nm.isNotificationPolicyAccessGranted) {
                 nm.setInterruptionFilter(android.app.NotificationManager.INTERRUPTION_FILTER_NONE)
             }
-            // If not granted, it simply does nothing (no settings page opened)
-        } catch (_: Exception) {
-            // ignore
-        }
+        } catch (_: Exception) {}
     }
 
     private fun lowerBrightness() {
@@ -104,9 +122,7 @@ class MainActivity : AppCompatActivity() {
             val lp = window.attributes
             lp.screenBrightness = 0.05f
             window.attributes = lp
-        } catch (_: Exception) {
-            // ignore
-        }
+        } catch (_: Exception) {}
     }
 
     private fun muteAllVolumes() {
@@ -116,29 +132,20 @@ class MainActivity : AppCompatActivity() {
             am.setStreamVolume(AudioManager.STREAM_NOTIFICATION, 0, 0)
             am.setStreamVolume(AudioManager.STREAM_SYSTEM, 0, 0)
             am.setStreamVolume(AudioManager.STREAM_RING, 0, 0)
-        } catch (_: Exception) {
-            // ignore
-        }
+        } catch (_: Exception) {}
     }
 
     private fun updateStatus() {
-        // Bluetooth
         val btOn = try {
             val bm = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
             bm.adapter?.isEnabled == true
-        } catch (_: Exception) {
-            false
-        }
+        } catch (_: Exception) { false }
+
         binding.tvBluetoothStatus.text = if (btOn) "Bluetooth: ON" else "Bluetooth: OFF"
         binding.tvBluetoothStatus.setTextColor(if (btOn) 0xFFF44336.toInt() else 0xFF4CAF50.toInt())
 
-        // DND
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
-        val hasAccess = try {
-            nm.isNotificationPolicyAccessGranted
-        } catch (_: Exception) {
-            false
-        }
+        val hasAccess = try { nm.isNotificationPolicyAccessGranted } catch (_: Exception) { false }
         val dndActive = hasAccess && nm.currentInterruptionFilter == android.app.NotificationManager.INTERRUPTION_FILTER_NONE
 
         binding.tvDndStatus.text = when {
