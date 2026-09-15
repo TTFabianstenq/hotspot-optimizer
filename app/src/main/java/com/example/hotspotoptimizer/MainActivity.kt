@@ -34,12 +34,13 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Keep screen on – helps some phones keep hotspot stable
+        // Keep screen on – critical for many phones to keep hotspot alive
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         updateStatus()
 
-        binding.btnOptimize.setOnClickListener { optimize() }
+        binding.btnOptimize.setOnClickListener { maxOptimize() }
+
         binding.btnGrantDnd.setOnClickListener { requestDndAccess() }
         binding.btnOpenAppSettings.setOnClickListener {
             startActivity(Intent(Settings.ACTION_APPLICATION_SETTINGS))
@@ -50,6 +51,22 @@ class MainActivity : AppCompatActivity() {
         binding.btnBatterySettings.setOnClickListener {
             startActivity(Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS))
         }
+        binding.btnNfcSettings.setOnClickListener {
+            startActivity(Intent(Settings.ACTION_NFC_SETTINGS))
+        }
+        binding.btnWifiSettings.setOnClickListener {
+            startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
+        }
+        binding.btnDeveloperOptions.setOnClickListener {
+            try {
+                startActivity(Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS))
+            } catch (_: Exception) {
+                Toast.makeText(this, "Developer options not enabled", Toast.LENGTH_SHORT).show()
+            }
+        }
+        binding.btnDisplaySettings.setOnClickListener {
+            startActivity(Intent(Settings.ACTION_DISPLAY_SETTINGS))
+        }
     }
 
     override fun onResume() {
@@ -57,8 +74,8 @@ class MainActivity : AppCompatActivity() {
         updateStatus()
     }
 
-    private fun optimize() {
-        // 1. Bluetooth off
+    private fun maxOptimize() {
+        // 1. Bluetooth OFF
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT)
                 != PackageManager.PERMISSION_GRANTED
@@ -71,26 +88,29 @@ class MainActivity : AppCompatActivity() {
             turnOffBluetooth()
         }
 
-        // 2. Do Not Disturb
+        // 2. Do Not Disturb ON (total silence)
         enableDoNotDisturb()
 
-        // 3. NFC off
-        turnOffNfc()
-
-        // 4. Lower brightness a lot (saves battery → longer hotspot)
+        // 3. Lower brightness hard (saves battery → longer hotspot)
         lowerBrightness()
 
-        // 5. Mute media volume
+        // 4. Mute media volume
         muteMediaVolume()
 
+        // 5. Mute notification & system volume too
+        muteOtherVolumes()
+
+        // 6. Disable auto-rotate (saves a tiny bit of CPU)
+        disableAutoRotate()
+
         updateStatus()
-        Toast.makeText(this, "Optimizations applied", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "MAX performance mode applied", Toast.LENGTH_SHORT).show()
     }
 
     private fun turnOffBluetooth() {
         try {
-            val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-            val adapter = bluetoothManager.adapter
+            val bm = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+            val adapter = bm.adapter
             if (adapter != null && adapter.isEnabled) {
                 @Suppress("DEPRECATION")
                 adapter.disable()
@@ -107,44 +127,46 @@ class MainActivity : AppCompatActivity() {
         } else {
             MaterialAlertDialogBuilder(this)
                 .setTitle("Do Not Disturb permission needed")
-                .setMessage("Grant access so the app can mute notifications.")
+                .setMessage("Grant access so the app can mute all notifications.")
                 .setPositiveButton("Open settings") { _, _ -> requestDndAccess() }
                 .setNegativeButton("Cancel", null)
                 .show()
         }
     }
 
-    private fun turnOffNfc() {
-        try {
-            val nfc = NfcAdapter.getDefaultAdapter(this)
-            if (nfc != null && nfc.isEnabled) {
-                // We cannot force-disable NFC without system permissions.
-                // Open the NFC settings instead so the user can turn it off in one tap.
-                startActivity(Intent(Settings.ACTION_NFC_SETTINGS))
-                Toast.makeText(this, "Turn NFC OFF in the settings that just opened", Toast.LENGTH_LONG).show()
-            }
-        } catch (_: Exception) {
-            // NFC not available on this device – ignore
-        }
-    }
-
     private fun lowerBrightness() {
         try {
-            // Lower the current window brightness (works without WRITE_SETTINGS)
             val lp = window.attributes
-            lp.screenBrightness = 0.1f   // 10%
+            lp.screenBrightness = 0.05f   // almost minimum
             window.attributes = lp
-        } catch (_: Exception) {
-            // ignore
-        }
+        } catch (_: Exception) {}
     }
 
     private fun muteMediaVolume() {
         try {
             val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
             am.setStreamVolume(AudioManager.STREAM_MUSIC, 0, 0)
+        } catch (_: Exception) {}
+    }
+
+    private fun muteOtherVolumes() {
+        try {
+            val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            am.setStreamVolume(AudioManager.STREAM_NOTIFICATION, 0, 0)
+            am.setStreamVolume(AudioManager.STREAM_SYSTEM, 0, 0)
+            am.setStreamVolume(AudioManager.STREAM_RING, 0, 0)
+        } catch (_: Exception) {}
+    }
+
+    private fun disableAutoRotate() {
+        try {
+            Settings.System.putInt(
+                contentResolver,
+                Settings.System.ACCELEROMETER_ROTATION,
+                0
+            )
         } catch (_: Exception) {
-            // ignore
+            // Needs WRITE_SETTINGS – most phones will just ignore this
         }
     }
 
@@ -157,9 +179,8 @@ class MainActivity : AppCompatActivity() {
         val btOn = try {
             val bm = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
             bm.adapter?.isEnabled == true
-        } catch (_: SecurityException) {
-            false
-        }
+        } catch (_: SecurityException) { false }
+
         binding.tvBluetoothStatus.text = if (btOn) "Bluetooth: ON" else "Bluetooth: OFF"
         binding.tvBluetoothStatus.setTextColor(if (btOn) 0xFFF44336.toInt() else 0xFF4CAF50.toInt())
 
@@ -167,6 +188,7 @@ class MainActivity : AppCompatActivity() {
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
         val hasAccess = nm.isNotificationPolicyAccessGranted
         val dndActive = hasAccess && nm.currentInterruptionFilter == android.app.NotificationManager.INTERRUPTION_FILTER_NONE
+
         binding.tvDndStatus.text = when {
             !hasAccess -> "Do Not Disturb: No permission"
             dndActive -> "Do Not Disturb: ON"
@@ -180,7 +202,7 @@ class MainActivity : AppCompatActivity() {
             }
         )
 
-        // NFC status
+        // NFC
         val nfc = NfcAdapter.getDefaultAdapter(this)
         val nfcOn = nfc?.isEnabled == true
         binding.tvNfcStatus.text = when {
