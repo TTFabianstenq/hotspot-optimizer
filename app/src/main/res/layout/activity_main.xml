@@ -50,12 +50,21 @@
         android:text="OPTIMIZE NOW"
         android:textSize="20sp" />
 
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnStop"
+        style="@style/Widget.Material3.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_marginTop="16dp"
+        android:text="STOP / RESTORE AUDIO"
+        android:textSize="16sp" />
+
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="32dp"
-        android:text="What this does:\n- Bluetooth OFF\n- Do Not Disturb ON\n- Brightness lowered\n- Volumes muted\n- Ad-blocking DNS (AdGuard) via VPN"
-        android:textSize="14sp"
+        android:text="OPTIMIZE: Bluetooth off, DND on, brightness down, volumes muted, AdGuard DNS\n\nSTOP: Restores volumes, brightness, turns DND off, stops VPN, turns Bluetooth back on"
+        android:textSize="13sp"
         android:gravity="center"
         android:textColor="#555555" />
 
