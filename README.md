@@ -1,37 +1,23 @@
-# Hotspot Optimizer – MAX mode
+# Hotspot Optimizer
 
-Simple Android utility that reduces interference, background noise and battery drain while using mobile hotspot.
+Fully automatic Android utility. One button. No settings pages opened.
 
-## What "MAX OPTIMIZE NOW" does
+## What the single button does
 
-- Turns **Bluetooth OFF**
-- Enables **Do Not Disturb** (total silence)
-- Lowers **screen brightness** hard (saves battery)
-- Mutes **media + notification + system + ring** volumes
-- Tries to disable **auto-rotate**
-- Keeps the **screen on** while the app is open
+- Turns Bluetooth OFF
+- Enables Do Not Disturb (after you grant the permission once)
+- Lowers screen brightness
+- Mutes media, notification, system and ring volumes
+- Keeps the screen on while the app is open
 
-## Manual one-tap shortcuts also included
+## What it does NOT do
 
-- Grant Do Not Disturb access
-- Force-stop background apps
-- Turn Location / GPS off
-- Turn NFC off
-- Battery Saver
-- Wi-Fi settings (so you can change band/channel)
-- Display settings
-- Developer Options (enable "Stay Awake" if you want)
-
-## What it does **NOT** do
-
-- Does **not** increase Wi-Fi transmit power
-- Does **not** improve signal range or strength
-- Cannot force-stop other apps automatically (Android restriction)
-- Cannot change radio power levels without root
+- Does not increase hotspot signal strength
+- Does not open any system settings screens
+- Does not force-stop other apps (Android restriction)
 
 ## How to get the APK
 
-1. Go to the **Actions** tab of this repository
-2. Wait for the latest build to finish (green check)
-3. Download the artifact named **app-debug**
-4. Extract and install `app-debug.apk`
+1. Go to the Actions tab
+2. Download the latest successful `app-debug` artifact
+3. Extract and install the APK
