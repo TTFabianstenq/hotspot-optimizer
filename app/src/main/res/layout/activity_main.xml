@@ -24,7 +24,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
-            android:text="MAX mode – reduces radios, noise & battery drain.\nDoes NOT increase signal strength."
+            android:text="MAX mode - reduces radios, noise and battery drain.\nDoes NOT increase signal strength."
             android:textSize="13sp"
             android:gravity="center"
             android:textColor="#666666" />
@@ -34,7 +34,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:text="Bluetooth: —"
+            android:text="Bluetooth: -"
             android:textSize="16sp"
             android:gravity="center" />
 
@@ -43,7 +43,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Do Not Disturb: —"
+            android:text="Do Not Disturb: -"
             android:textSize="16sp"
             android:gravity="center" />
 
@@ -52,7 +52,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="NFC: —"
+            android:text="NFC: -"
             android:textSize="16sp"
             android:gravity="center" />
 
