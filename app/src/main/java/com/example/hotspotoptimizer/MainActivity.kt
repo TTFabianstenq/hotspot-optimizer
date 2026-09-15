@@ -50,6 +50,10 @@ class MainActivity : AppCompatActivity() {
         binding.btnOptimize.setOnClickListener {
             startOptimize()
         }
+
+        binding.btnStop.setOnClickListener {
+            stopOptimizations()
+        }
     }
 
     override fun onResume() {
@@ -58,13 +62,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startOptimize() {
-        // Bluetooth
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT)
                 != PackageManager.PERMISSION_GRANTED
             ) {
                 requestBluetoothPermission.launch(Manifest.permission.BLUETOOTH_CONNECT)
-                // VPN will be requested after Bluetooth flow finishes
                 prepareVpn()
                 return
             }
@@ -86,7 +88,7 @@ class MainActivity : AppCompatActivity() {
     private fun startDnsVpn() {
         val intent = Intent(this, DnsVpnService::class.java)
         startService(intent)
-        Toast.makeText(this, "Ad-blocking DNS (AdGuard) started", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Ad-blocking DNS started", Toast.LENGTH_SHORT).show()
     }
 
     private fun runAutomaticOptimizations() {
@@ -95,6 +97,60 @@ class MainActivity : AppCompatActivity() {
         muteAllVolumes()
         updateStatus()
         Toast.makeText(this, "Optimizations applied", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun stopOptimizations() {
+        // Stop VPN
+        try {
+            val stopIntent = Intent(this, DnsVpnService::class.java).apply {
+                action = DnsVpnService.ACTION_STOP
+            }
+            startService(stopIntent)
+        } catch (_: Exception) {}
+
+        // Restore volumes (set media to ~60%)
+        try {
+            val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            val maxMusic = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+            am.setStreamVolume(AudioManager.STREAM_MUSIC, (maxMusic * 0.6).toInt(), 0)
+
+            val maxNotif = am.getStreamMaxVolume(AudioManager.STREAM_NOTIFICATION)
+            am.setStreamVolume(AudioManager.STREAM_NOTIFICATION, (maxNotif * 0.5).toInt(), 0)
+
+            val maxSystem = am.getStreamMaxVolume(AudioManager.STREAM_SYSTEM)
+            am.setStreamVolume(AudioManager.STREAM_SYSTEM, (maxSystem * 0.5).toInt(), 0)
+
+            val maxRing = am.getStreamMaxVolume(AudioManager.STREAM_RING)
+            am.setStreamVolume(AudioManager.STREAM_RING, (maxRing * 0.5).toInt(), 0)
+        } catch (_: Exception) {}
+
+        // Restore brightness
+        try {
+            val lp = window.attributes
+            lp.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+            window.attributes = lp
+        } catch (_: Exception) {}
+
+        // Turn off Do Not Disturb
+        try {
+            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+            if (nm.isNotificationPolicyAccessGranted) {
+                nm.setInterruptionFilter(android.app.NotificationManager.INTERRUPTION_FILTER_ALL)
+            }
+        } catch (_: Exception) {}
+
+        // Turn Bluetooth back on
+        try {
+            val bm = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+            val adapter = bm.adapter
+            if (adapter != null && !adapter.isEnabled) {
+                @Suppress("DEPRECATION")
+                adapter.enable()
+            }
+        } catch (_: Exception) {}
+
+        updateStatus()
+        Toast.makeText(this, "Optimizations stopped - audio restored", Toast.LENGTH_SHORT).show()
     }
 
     private fun turnOffBluetooth() {
