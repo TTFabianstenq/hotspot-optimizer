@@ -19,7 +19,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="Fully automatic. No settings pages."
+        android:text="Automatic + Ad-blocking DNS"
         android:textSize="14sp"
         android:gravity="center"
         android:textColor="#666666" />
@@ -54,7 +54,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="32dp"
-        android:text="What this does automatically:\n- Bluetooth OFF\n- Do Not Disturb ON (after one-time grant)\n- Brightness lowered\n- All volumes muted\n- Screen stays on"
+        android:text="What this does:\n- Bluetooth OFF\n- Do Not Disturb ON\n- Brightness lowered\n- Volumes muted\n- Ad-blocking DNS (AdGuard) via VPN"
         android:textSize="14sp"
         android:gravity="center"
         android:textColor="#555555" />
